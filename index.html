@@ -9,12 +9,12 @@
         canvas { display: block; }
         #overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: flex; justify-content: center;
+            background: rgba(0,0,0,0.98); display: flex; justify-content: center;
             align-items: center; z-index: 1000; color: white;
         }
         #startBtn {
-            padding: 12px 30px; font-size: 0.9rem; background: transparent;
-            color: #fff; border: 1px solid #fff; border-radius: 2px;
+            padding: 12px 35px; font-size: 0.9rem; background: transparent;
+            color: #fff; border: 1px solid #fff; border-radius: 5px;
             cursor: pointer; letter-spacing: 2px;
         }
     </style>
@@ -45,6 +45,7 @@
         let stars = [];
         let buildings = [];
         let animationStep = 0; 
+        let isFinalMessage = false;
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -54,15 +55,15 @@
         window.addEventListener('resize', resize);
 
         class TextParticle {
-            constructor(x, y) {
+            constructor(x, y, color) {
                 this.destX = x; this.destY = y;
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
-                this.vx = (Math.random() - 0.5) * 25;
-                this.vy = (Math.random() - 0.5) * 25;
-                this.acc = 0.05; 
-                this.friction = 0.95;
-                this.color = "rgba(255, 255, 255, " + (Math.random() * 0.5 + 0.5) + ")";
+                this.vx = (Math.random() - 0.5) * 20;
+                this.vy = (Math.random() - 0.5) * 20;
+                this.acc = 0.06; 
+                this.friction = 0.94;
+                this.color = color;
             }
             update() {
                 let dx = this.destX - this.x;
@@ -73,24 +74,22 @@
             }
             draw() {
                 ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, 1.5, 1.5);
+                ctx.fillRect(this.x, this.y, 1.8, 1.8); // Tăng kích thước hạt để rõ hơn
             }
         }
 
-        function createTextParticles(lines) {
-            const oldParticles = [...textParticles];
-textParticles = [];
+        function createTextParticles(lines, color = "#FFFFFF") {
+const oldParticles = [...textParticles];
+            textParticles = [];
             
             const isMobile = window.innerWidth < 600;
-            // Tối ưu fontSize: Tự động co giãn theo chiều rộng màn hình để không bị tràn
-            let fontSize = isMobile ? window.innerWidth / 13 : 55;
+            let fontSize = isMobile ? window.innerWidth / 13 : 52;
             
-            // Kiểm tra nếu dòng chữ quá dài so với màn hình thì thu nhỏ tiếp
             ctx.font = `bold ${fontSize}px Arial`;
-            let maxWidth = window.innerWidth * 0.85; 
+            let maxWidth = window.innerWidth * 0.9; 
             lines.forEach(line => {
-                while(ctx.measureText(line).width > maxWidth && fontSize > 10) {
-                    fontSize -= 2;
+                while(ctx.measureText(line).width > maxWidth && fontSize > 12) {
+                    fontSize -= 1;
                     ctx.font = `bold ${fontSize}px Arial`;
                 }
             });
@@ -100,22 +99,25 @@ textParticles = [];
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             lines.forEach((line, index) => {
-                const yOffset = (index - (lines.length - 1) / 2) * (fontSize * 1.5);
+                const yOffset = (index - (lines.length - 1) / 2) * (fontSize * 1.6);
                 ctx.fillText(line, canvas.width / 2, canvas.height / 2 + yOffset);
             });
 
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
 
-            for (let y = 0; y < canvas.height; y += 3) {
-                for (let x = 0; x < canvas.width; x += 3) {
+            // Quét hạt cực dày (cách 2px) cho dòng chữ cuối
+            const gap = isFinalMessage ? 2 : 3;
+
+            for (let y = 0; y < canvas.height; y += gap) {
+                for (let x = 0; x < canvas.width; x += gap) {
                     if (data[(y * canvas.width + x) * 4 + 3] > 128) {
                         if (oldParticles.length > 0) {
                             let p = oldParticles.pop();
-                            p.destX = x; p.destY = y;
+                            p.destX = x; p.destY = y; p.color = color;
                             textParticles.push(p);
                         } else {
-                            textParticles.push(new TextParticle(x, y));
+                            textParticles.push(new TextParticle(x, y, color));
                         }
                     }
                 }
@@ -124,18 +126,19 @@ textParticles = [];
 
         function initBuildings() {
             buildings = [];
-            const spacing = window.innerWidth < 600 ? 55 : 85;
+            const spacing = isMobile() ? 55 : 85;
             for (let i = 0; i < window.innerWidth; i += spacing) {
-                let h = Math.random() * 80 + 60;
-                let b = { x: i, w: spacing - 10, h: h, windows: [] };
-                for (let wy = canvas.height - h + 15; wy < canvas.height - 10; wy += 18) {
-                    for (let wx = i + 10; wx < i + spacing - 15; wx += 12) {
+                buildings.push({ x: i, w: spacing - 10, h: Math.random() * 80 + 60, windows: [] });
+            }
+            buildings.forEach(b => {
+                for (let wy = canvas.height - b.h + 15; wy < canvas.height - 10; wy += 18) {
+                    for (let wx = b.x + 10; wx < b.x + b.w - 5; wx += 12) {
                         b.windows.push({x: wx, y: wy, on: Math.random() > 0.4});
                     }
                 }
-                buildings.push(b);
-            }
+            });
         }
+        function isMobile() { return window.innerWidth < 600; }
 
         class Firework {
             constructor(x, isSpecial = false) {
@@ -145,9 +148,9 @@ textParticles = [];
                 this.speed = 4.5;
                 this.color = isSpecial ? "#ffd700" : `hsl(${Math.random() * 360}, 100%, 75%)`;
                 this.isSpecial = isSpecial;
-                this.dead = false;
+this.dead = false;
             }
-update() { this.y -= this.speed; if (this.y <= this.targetY) this.dead = true; }
+            update() { this.y -= this.speed; if (this.y <= this.targetY) this.dead = true; }
             draw() {
                 ctx.fillStyle = this.color;
                 ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
@@ -166,11 +169,12 @@ update() { this.y -= this.speed; if (this.y <= this.targetY) this.dead = true; }
         }
 
         function loop() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            // Nếu là lời chúc cuối, làm tối nền hơn để chữ nổi bật
+            ctx.fillStyle = isFinalMessage ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             stars.forEach(s => {
-                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.5 + 0.5})`;
+                ctx.fillStyle = `rgba(255,255,255,${Math.random()})`;
                 ctx.fillRect(s.x, s.y, s.size, s.size);
             });
 
@@ -192,16 +196,16 @@ update() { this.y -= this.speed; if (this.y <= this.targetY) this.dead = true; }
                     if (fw.dead) {
                         if (fw.isSpecial || Math.random() > 0.6) createStarExplosion(fw.x, fw.y);
                         else {
-                            for(let j=0; j<70; j++) particles.push({
-                                x: fw.x, y: fw.y, vx: Math.random()*8-4, vy: Math.random()*8-4, 
-                                alpha: 1, color: fw.color, gravity: 0.1
+                            for(let j=0; j<60; j++) particles.push({
+                                x: fw.x, y: fw.y, vx: Math.random()*7-3.5, vy: Math.random()*7-3.5, 
+                                alpha: 1, color: fw.color, gravity: 0.08
                             });
                         }
                         fireworks.splice(i, 1);
                     }
                 });
                 particles.forEach((p, i) => {
-                    p.x += p.vx; p.y += p.vy + p.gravity; p.alpha -= 0.012;
+                    p.x += p.vx; p.y += p.vy + p.gravity; p.alpha -= 0.015;
                     if (p.alpha <= 0) particles.splice(i, 1);
                     ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
                     ctx.fillRect(p.x, p.y, 1.2, 1.2);
@@ -212,27 +216,27 @@ update() { this.y -= this.speed; if (this.y <= this.targetY) this.dead = true; }
         }
 
         resize();
-        for(let i=0; i<150; i++) stars.push({x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, size: Math.random()*1.5});
+for(let i=0; i<150; i++) stars.push({x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, size: Math.random()*1.5});
 
         startBtn.onclick = () => {
             overlay.style.display = 'none';
-music.play().catch(() => {
+            music.play().catch(() => {
                 document.addEventListener('touchstart', () => music.play(), {once: true});
             });
 
             animationStep = 1;
-            createTextParticles(["HAPPY NEW YEAR", "MY STAR"]);
+            createTextParticles(["HAPPY NEW YEAR", "MY STAR"], "#FFFFFF");
 
-            // Đổi sang dòng chữ cuối sau 8 giây (Tăng từ 6s)
             setTimeout(() => {
                 animationStep = 2;
+                isFinalMessage = true; // Kích hoạt chế độ chữ cuối rực rỡ
                 createTextParticles([
                     "Ngôi sao ơi, một năm mới",
                     "một hành trình mới,",
                     "hãy toả sáng thật rực rỡ nhé."
-                ]);
+                ], "#FFD700"); // Chữ chuyển sang màu VÀNG KIM
 
-                setInterval(() => { fireworks.push(new Firework()); }, 500); 
+                setInterval(() => { fireworks.push(new Firework()); }, 550); 
             }, 8000); 
 
             loop();
