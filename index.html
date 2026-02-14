@@ -61,8 +61,8 @@
                 this.y = Math.random() * canvas.height;
                 this.vx = (Math.random() - 0.5) * 20;
                 this.vy = (Math.random() - 0.5) * 20;
-                this.acc = 0.06; 
-                this.friction = 0.94;
+                this.acc = 0.07; 
+                this.friction = 0.93;
                 this.color = color;
             }
             update() {
@@ -74,21 +74,23 @@
             }
             draw() {
                 ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, 1.8, 1.8); // Tăng kích thước hạt để rõ hơn
+                ctx.fillRect(this.x, this.y, 1.8, 1.8);
             }
         }
 
         function createTextParticles(lines, color = "#FFFFFF") {
-const oldParticles = [...textParticles];
-            textParticles = [];
+            const oldParticles = [...textParticles];
+textParticles = [];
             
             const isMobile = window.innerWidth < 600;
-            let fontSize = isMobile ? window.innerWidth / 13 : 52;
+            // Tăng cỡ chữ lên vì dòng đã được chia ngắn lại
+            let fontSize = isMobile ? window.innerWidth / 10 : 55;
             
             ctx.font = `bold ${fontSize}px Arial`;
-            let maxWidth = window.innerWidth * 0.9; 
+            let maxWidth = window.innerWidth * 0.85; 
+            
             lines.forEach(line => {
-                while(ctx.measureText(line).width > maxWidth && fontSize > 12) {
+                while(ctx.measureText(line).width > maxWidth && fontSize > 15) {
                     fontSize -= 1;
                     ctx.font = `bold ${fontSize}px Arial`;
                 }
@@ -99,14 +101,15 @@ const oldParticles = [...textParticles];
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             lines.forEach((line, index) => {
-                const yOffset = (index - (lines.length - 1) / 2) * (fontSize * 1.6);
+                // Tăng khoảng cách dòng để dễ đọc hơn
+                const yOffset = (index - (lines.length - 1) / 2) * (fontSize * 1.7);
                 ctx.fillText(line, canvas.width / 2, canvas.height / 2 + yOffset);
             });
 
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
 
-            // Quét hạt cực dày (cách 2px) cho dòng chữ cuối
+            // Quét hạt siêu dày cho dòng chữ cuối
             const gap = isFinalMessage ? 2 : 3;
 
             for (let y = 0; y < canvas.height; y += gap) {
@@ -126,7 +129,7 @@ const oldParticles = [...textParticles];
 
         function initBuildings() {
             buildings = [];
-            const spacing = isMobile() ? 55 : 85;
+            const spacing = window.innerWidth < 600 ? 55 : 85;
             for (let i = 0; i < window.innerWidth; i += spacing) {
                 buildings.push({ x: i, w: spacing - 10, h: Math.random() * 80 + 60, windows: [] });
             }
@@ -138,7 +141,6 @@ const oldParticles = [...textParticles];
                 }
             });
         }
-        function isMobile() { return window.innerWidth < 600; }
 
         class Firework {
             constructor(x, isSpecial = false) {
@@ -147,8 +149,8 @@ const oldParticles = [...textParticles];
                 this.targetY = Math.random() * (canvas.height * 0.45);
                 this.speed = 4.5;
                 this.color = isSpecial ? "#ffd700" : `hsl(${Math.random() * 360}, 100%, 75%)`;
-                this.isSpecial = isSpecial;
-this.dead = false;
+this.isSpecial = isSpecial;
+                this.dead = false;
             }
             update() { this.y -= this.speed; if (this.y <= this.targetY) this.dead = true; }
             draw() {
@@ -169,7 +171,6 @@ this.dead = false;
         }
 
         function loop() {
-            // Nếu là lời chúc cuối, làm tối nền hơn để chữ nổi bật
             ctx.fillStyle = isFinalMessage ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -225,16 +226,19 @@ for(let i=0; i<150; i++) stars.push({x: Math.random()*window.innerWidth, y: Math
             });
 
             animationStep = 1;
-            createTextParticles(["HAPPY NEW YEAR", "MY STAR"], "#FFFFFF");
+            createTextParticles(["HAPPY NEW YEAR", "MY STAR "], "#FFFFFF");
 
             setTimeout(() => {
                 animationStep = 2;
-                isFinalMessage = true; // Kích hoạt chế độ chữ cuối rực rỡ
+                isFinalMessage = true; 
+                // CHIA NHỎ DÒNG CHỮ ĐỂ HIỂN THỊ TO VÀ RÕ TRÊN ĐIỆN THOẠI
                 createTextParticles([
-                    "Ngôi sao ơi, một năm mới",
+                    "Ngôi sao ơi,",
+                    "một năm mới",
                     "một hành trình mới,",
-                    "hãy toả sáng thật rực rỡ nhé."
-                ], "#FFD700"); // Chữ chuyển sang màu VÀNG KIM
+                    "hãy toả sáng",
+                    "thật rực rỡ nhé."
+                ], "#FFD700"); 
 
                 setInterval(() => { fireworks.push(new Firework()); }, 550); 
             }, 8000); 
